@@ -1,9 +1,9 @@
-// By VishwaGauravIn (https://itsvg.in)
+// index.js
+const { TwitterApi } = require('twitter-api-v2');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const SECRETS = require('./SECRETS');
 
-const GenAI = require("@google/generative-ai");
-const { TwitterApi } = require("twitter-api-v2");
-const SECRETS = require("./SECRETS");
-
+// --- Twitter client (OAuth 1.0a) ---
 const twitterClient = new TwitterApi({
   appKey: SECRETS.APP_KEY,
   appSecret: SECRETS.APP_SECRET,
@@ -11,36 +11,56 @@ const twitterClient = new TwitterApi({
   accessSecret: SECRETS.ACCESS_SECRET,
 });
 
-const generationConfig = {
-  maxOutputTokens: 400,
-};
-const genAI = new GenAI.GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
+// --- Gemini client ---
+const genAI = new GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
+const generationConfig = { maxOutputTokens: 400 };
 
-async function run() {
-  // For text-only input, use the gemini-pro model
+function clampTweet(text) {
+  // one-line, ≤280 chars, no quotes or triple backticks
+  let t = String(text || '')
+    .replace(/```[\s\S]*?```/g, '')     // strip fenced blocks
+    .replace(/\s+/g, ' ')               // collapse whitespace/newlines
+    .trim();
+  if (t.length > 280) t = t.slice(0, 277).trimEnd() + '…';
+  return t;
+}
+
+async function makeTweetText(modelName) {
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-pro",
+    model: modelName,
     generationConfig,
   });
 
-  // Write your prompt here
-  const prompt =
-    "generate a web development content, tips and tricks or something new or some rant or some advice as a tweet, it should not be vague and should be unique; under 280 characters and should be plain text, you can use emojis";
+  const prompt = [
+    'Generate a tweet on web dev:',
+    '• tips & tricks, a fresh insight, a tiny rant, or practical advice',
+    '• be specific, unique, and helpful',
+    '• ≤280 chars, plain text (you may use a couple emojis)',
+  ].join('\n');
 
   const result = await model.generateContent(prompt);
   const response = await result.response;
-  const text = response.text();
-  console.log(text);
-  sendTweet(text);
+  return clampTweet(response.text());
 }
-
-run();
 
 async function sendTweet(tweetText) {
-  try {
-    await twitterClient.v2.tweet(tweetText);
-    console.log("Tweet sent successfully!");
-  } catch (error) {
-    console.error("Error sending tweet:", error);
-  }
+  await twitterClient.v2.tweet(tweetText);
+  console.log('Tweet sent successfully!');
 }
+
+(async () => {
+  try {
+    // Fail fast if tokens/permissions are wrong
+    const me = await twitterClient.v2.me();
+    console.log(`Auth OK as @${me.data?.username || 'unknown'}`);
+
+    const text = await makeTweetText(SECRETS.GEMINI_MODEL);
+    if (!text) throw new Error('Generated empty tweet text.');
+    console.log('Draft:', text);
+
+    await sendTweet(text);
+  } catch (err) {
+    console.error('Startup/auth/send error:', err?.data || err?.message || err);
+    process.exit(1);
+  }
+})();
