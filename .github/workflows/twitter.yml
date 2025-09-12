@@ -1,17 +1,17 @@
 name: Auto Tweet Using AI
 
-# Runs every hour
 on:
   schedule:
     - cron: "0 * * * *"
-
-  # Manual trigger from Actions tab
   workflow_dispatch:
 
 jobs:
   build:
     name: Auto Tweet Using AI
     runs-on: ubuntu-latest
+
+    # add this line so environment secrets are injected
+    environment: right
 
     env:
       APP_KEY: ${{ secrets.APP_KEY }}
