@@ -14,5 +14,5 @@ module.exports = {
   ACCESS_SECRET: requireEnv('ACCESS_SECRET', 20),
   GEMINI_API_KEY: requireEnv('GEMINI_API_KEY', 20),
   // Optional: override model via GH secret/ENV; sane default if not set
-  GEMINI_MODEL: (process.env.GEMINI_MODEL || 'gemini-1.5-pro').trim(),
+  GEMINI_MODEL: (process.env.GEMINI_MODEL || 'models/gemini-2.5-flash').trim(),
 };
