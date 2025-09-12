@@ -53,8 +53,11 @@ async function sendTweet(tweetText) {
     // Fail fast if tokens/permissions are wrong
     const me = await twitterClient.v2.me();
     console.log(`Auth OK as @${me.data?.username || 'unknown'}`);
-
-    const text = await makeTweetText(SECRETS.GEMINI_MODEL);
+    const genAI = new GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: 'models/gemini-2.5-flash',  // or whichever version you want
+      generationConfig,
+    });
     if (!text) throw new Error('Generated empty tweet text.');
     console.log('Draft:', text);
 
