@@ -1,4 +1,3 @@
-// index.js
 const { TwitterApi } = require('twitter-api-v2');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SECRETS = require('./SECRETS');
@@ -16,16 +15,16 @@ const genAI = new GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
 const generationConfig = { maxOutputTokens: 400 };
 
 function clampTweet(text) {
-  // one-line, ≤280 chars, no quotes or triple backticks
+  // one-line, ≤280 chars, no code blocks
   let t = String(text || '')
-    .replace(/```[\s\S]*?```/g, '')     // strip fenced blocks
-    .replace(/\s+/g, ' ')               // collapse whitespace/newlines
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
   if (t.length > 280) t = t.slice(0, 277).trimEnd() + '…';
   return t;
 }
 
-async function makeTweetText(modelName) {
+async function makeTweetText(modelName = 'models/gemini-2.5-flash') {
   const model = genAI.getGenerativeModel({
     model: modelName,
     generationConfig,
@@ -53,15 +52,16 @@ async function sendTweet(tweetText) {
     // Fail fast if tokens/permissions are wrong
     const me = await twitterClient.v2.me();
     console.log(`Auth OK as @${me.data?.username || 'unknown'}`);
-    const genAI = new GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'models/gemini-2.5-flash',  // or whichever version you want
-      generationConfig,
-    });
-    if (!text) throw new Error('Generated empty tweet text.');
-    console.log('Draft:', text);
 
-    await sendTweet(text);
+    // Generate the tweet using the Gemini 2.5-flash model
+    const tweetText = await makeTweetText();
+    if (!tweetText) {
+      console.log('Generated empty tweet text; exiting without sending.');
+      return;
+    }
+
+    console.log('Draft:', tweetText);
+    await sendTweet(tweetText);
   } catch (err) {
     console.error('Startup/auth/send error:', err?.data || err?.message || err);
     process.exit(1);
