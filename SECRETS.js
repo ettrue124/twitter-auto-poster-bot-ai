@@ -1,9 +1,18 @@
-const SECRETS = {
-  APP_KEY: process.env.APP_KEY,
-  APP_SECRET: process.env.APP_SECRET,
-  ACCESS_TOKEN: process.env.ACCESS_TOKEN,
-  ACCESS_SECRET: process.env.ACCESS_SECRET,
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-};
+// SECRETS.js
+function requireEnv(name, minLen = 10) {
+  const v = (process.env[name] || '').trim();
+  if (!v) throw new Error(`Missing required env var: ${name}`);
+  if (v.length < minLen) throw new Error(`${name} looks too short; paste full value (no quotes)`);
+  if (/^['"].*['"]$/.test(v)) throw new Error(`${name} contains quotes; remove them`);
+  return v;
+}
 
-module.exports = SECRETS;
+module.exports = {
+  APP_KEY: requireEnv('APP_KEY'),
+  APP_SECRET: requireEnv('APP_SECRET', 20),
+  ACCESS_TOKEN: requireEnv('ACCESS_TOKEN', 20),
+  ACCESS_SECRET: requireEnv('ACCESS_SECRET', 20),
+  GEMINI_API_KEY: requireEnv('GEMINI_API_KEY', 20),
+  // Optional: override model via GH secret/ENV; sane default if not set
+  GEMINI_MODEL: (process.env.GEMINI_MODEL || 'gemini-1.5-pro').trim(),
+};
